@@ -11,4 +11,5 @@ public class UserResponse {
     private final String email;
     private final List<String> roles;
     private final List<String> groups;
+
 }

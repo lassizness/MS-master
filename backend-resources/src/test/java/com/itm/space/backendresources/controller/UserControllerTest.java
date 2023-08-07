@@ -14,13 +14,16 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -39,13 +42,13 @@ public class UserControllerTest {
     private UserResponse userResponse;
     private UUID id;
 
-   /* @BeforeEach
+    @BeforeEach
     void setUp() {
-        userRequest = new UserRequest("valera","mamgja@mail.ru","3444","ne","valera");
+        userRequest = new UserRequest("valera", "mamgja@mail.ru", "3444", "firstValera", "lastValera");
         id = UUID.randomUUID();
-        userResponse = new UserResponse("valera","mamgja@mail.ru","3444","ne","valera");
+        userResponse = new UserResponse("firstValera", "lastValera", "mamgja@mail.ru", List.of("MODERATOR"), List.of("MODERATOR"));
 
-        when(userService.createUser(userRequest)).thenReturn(null); // Adjust if your method returns something
+        doNothing().when(userService).createUser(userRequest);
         when(userService.getUserById(id)).thenReturn(userResponse);
     }
 
@@ -63,9 +66,11 @@ public class UserControllerTest {
     void testGetUserById() throws Exception {
         mockMvc.perform(get("/api/users/" + id.toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(userResponse.getId().toString()));
+                .andExpect(jsonPath("$.firstName").value(userResponse.getFirstName()))
+                .andExpect(jsonPath("$.lastName").value(userResponse.getLastName()))
+                .andExpect(jsonPath("$.email").value(userResponse.getEmail()));
     }
-*/
+
     @Test
     @WithMockUser(username = "test", roles = "MODERATOR")
     void testHello() throws Exception {
