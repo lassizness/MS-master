@@ -19,14 +19,16 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -47,84 +49,118 @@ class UserServiceImplTest {
     private UserResource userResource;
 
     @Mock
+    private UserResponse userResponse;
+    @Mock
+    private UserRequest userRequest;
+
+    @Mock
     private RealmResource realmResource;
     @Mock
     private RoleMappingResource rolesResource;
 
-
+    private UUID id;
+    private UserRepresentation userRepresentation;
 
     @BeforeEach
     void setup() {
-        userService.realm = "ITM"; // Устанавливается значение realm в "ITM"
-        when(keycloakClient.realm(userService.realm)).thenReturn(realmResource); // Мокируется метод realm() для возвращения realmResource
-        when(realmResource.users()).thenReturn(usersResource); // Мокируется метод users() для возвращения usersResource
+        userService.realm = "ITM";
+        when(keycloakClient.realm(userService.realm)).thenReturn(realmResource);
+        when(realmResource.users()).thenReturn(usersResource);
+        userRequest = new UserRequest("valera", "mamgja@mail.ru", "3444", "firstValera", "lastValera");
+        id = UUID.randomUUID();
+        userResponse = new UserResponse("firstValera", "lastValera", "mamgja@mail.ru", List.of("MODERATOR"), List.of("MODERATOR"));
     }
 
     @Test
-    void createUserTest() {
+    public void createUser_Success() {
+        // Допустимые значения
         UserRequest userRequest = new UserRequest("valera", "mamgja@mail.ru", "test", "gg", "gg");
-        UserRepresentation userRepresentation = new UserRepresentation();
-        Response response = Response.created(null).build();
-        when(usersResource.create(any(UserRepresentation.class))).thenReturn(response); // Мокируется метод create() для возвращения response
-        assertDoesNotThrow(() -> userService.createUser(userRequest)); // Проверяется, что вызов метода createUser() не вызывает исключения
-        verify(usersResource, times(1)).create(any(UserRepresentation.class)); // Проверяется, что метод create() вызывается ровно 1 раз
+        id = UUID.randomUUID();
+
+        // Мокируем метод usersResource.create() и возвращаем заглушку
+        when(usersResource.create(any(UserRepresentation.class))).thenReturn(Response.created(null).build());
+
+        // Вызов метода
+        userService.createUser(userRequest);
+
+        // Проверка взаимодействий
+        verify(usersResource, times(1)).create(any(UserRepresentation.class));
     }
 
     @Test
-    void createUserTestFailure() {
+    public void createUser_WebApplicationExceptionThrown() {
+        // Подготовка входных данных
         UserRequest userRequest = new UserRequest("valera", "mamgja@mail.ru", "test", "gg", "gg");
-        Response response = Response.serverError().build();
-        when(usersResource.create(any(UserRepresentation.class))).thenReturn(response); // Мокируется метод create() для возвращения response с ошибкой
-        assertThrows(BackendResourcesException.class, () -> userService.createUser(userRequest)); // Проверяется, что вызов метода createUser() вызывает BackendResourcesException
-        // Проверка завершена успешно, так как ожидается исключение
+
+        // Настройка моков
+        when(usersResource.create(any(UserRepresentation.class)))
+                .thenThrow(new WebApplicationException("Test exception"));
+
+        // Ожидаем исключение и проверяем его
+        BackendResourcesException thrownException = assertThrows(BackendResourcesException.class,
+                () -> userService.createUser(userRequest));
+
+        assertTrue(thrownException.getMessage().contains("Test exception"));
+
+        // Проверка, что моки действительно вызываются
+        verify(usersResource).create(any(UserRepresentation.class));
     }
 
-/*    @Test
-    void getUserByIdTest() {
-        UUID userId = UUID.fromString("7b745b1b-034e-409a-9ff8-e8778a8497d3");
-        UserRepresentation userRepresentation = new UserRepresentation();
-        List<UserRepresentation> userList = Collections.singletonList(userRepresentation);
-        when(usersResource.get(userId.toString())).thenReturn(userResource); // Мокируется метод get() для возвращения userResource
-        when(userResource.toRepresentation()).thenReturn(userRepresentation); // Мокируется метод toRepresentation() для возвращения userRepresentation
-        when(userResource.roles()).thenReturn(null); // Мокируется метод roles() для возвращения null
-        assertThrows(BackendResourcesException.class, () -> userService.getUserById(userId)); // Проверяется, что вызов метода getUserById() вызывает BackendResourcesException
-        verify(usersResource, times(1)).get(userId.toString()); // Проверяется, что метод get() вызывается ровно 1 раз
-        verify(userResource, times(1)).toRepresentation(); // Проверяется, что метод toRepresentation() вызывается ровно 1 раз
-        verify(userResource, times(1)).roles(); // Проверяется, что метод roles() вызывается ровно 1 раз
-    }*/
-
     @Test
-    void getUserByIdTest() {
-        // Инициализация
-        UUID userId = UUID.randomUUID();
+    public void getUserById_Success() {
+        UUID id = UUID.fromString("7b745b1b-034e-409a-9ff8-e8778a8497d3");
+
+        // Создаем тестовые данные для UserResponse
+        UserResponse userResponse = new UserResponse("firstValera", "lastValera", "mamgja@mail.ru", Collections.singletonList("MODERATOR"), Collections.singletonList("GROUP1"));
+
+        // Создаем тестовые данные для UserRepresentation
         UserRepresentation userRepresentation = new UserRepresentation();
-        List<RoleRepresentation> userRoles = Collections.singletonList(new RoleRepresentation());
-        List<GroupRepresentation> userGroups = Collections.singletonList(new GroupRepresentation());
+        userRepresentation.setUsername("valera");
+        userRepresentation.setEmail("mamgja@mail.ru");
+        userRepresentation.setFirstName("firstValera");
+        userRepresentation.setLastName("lastValera");
 
-        MappingsRepresentation mappingsRepresentationMock = mock(MappingsRepresentation.class);
-        when(mappingsRepresentationMock.getRealmMappings()).thenReturn(userRoles);
-        when(rolesResource.getAll()).thenReturn(mappingsRepresentationMock);
+        // Создаем тестовые данные для ролей и групп
+        RoleRepresentation roleRepresentation = new RoleRepresentation();
+        roleRepresentation.setName("MODERATOR");
+        List<RoleRepresentation> roles = Collections.singletonList(roleRepresentation);
 
-        when(usersResource.get(userId.toString())).thenReturn(userResource);
+        GroupRepresentation groupRepresentation = new GroupRepresentation();
+        groupRepresentation.setName("GROUP1");
+        List<GroupRepresentation> groups = Collections.singletonList(groupRepresentation);
+
+        MappingsRepresentation mappingsRepresentation = new MappingsRepresentation();
+        mappingsRepresentation.setRealmMappings(roles);
+
+        // Мокируем методы
+        when(usersResource.get(String.valueOf(id))).thenReturn(userResource);
         when(userResource.toRepresentation()).thenReturn(userRepresentation);
         when(userResource.roles()).thenReturn(rolesResource);
-        when(userResource.groups()).thenReturn(userGroups);
+        when(rolesResource.getAll()).thenReturn(mappingsRepresentation);
+        when(userResource.groups()).thenReturn(groups);
 
-        UserResponse mockUserResponse = new UserResponse("firstValera", "lastValera", "mamgja@mail.ru", List.of("MODERATOR"), List.of("MODERATOR"));//ожидаемая строка ответа
-        when(userMapper.userRepresentationToUserResponse(userRepresentation, userRoles, userGroups)).thenReturn(mockUserResponse);
+        // Мокируем метод userMapper.userRepresentationToUserResponse() для возврата нужных данных
+        when(userMapper.userRepresentationToUserResponse(userRepresentation, roles, groups)).thenReturn(userResponse);
 
-        // Вызов и проверка
-        UserResponse response = userService.getUserById(userId);
+        // Вызываем тестируемый метод
+        UserResponse result = userService.getUserById(id);
 
-        assertEquals(mockUserResponse, response);
-        verify(usersResource, times(1)).get(userId.toString());
-        verify(userResource, times(1)).toRepresentation();
-        verify(userResource, times(2)).roles();//два вызова
-        verify(rolesResource, times(2)).getAll();//так же
-        verify(userResource, times(1)).groups();
+        // Проверяем результат
+        assertNotNull(result);
+        assertEquals(userResponse.getEmail(), result.getEmail());
+        assertEquals(userResponse.getFirstName(), result.getFirstName());
+        assertEquals(userResponse.getLastName(), result.getLastName());
+        assertEquals(userResponse.getRoles(), result.getRoles());
+        assertEquals(userResponse.getGroups(), result.getGroups());
+
+        // Проверка, что моки действительно вызываются
+        verify(usersResource).get(id.toString());
+        verify(userResource).toRepresentation();
+        verify(userResource,times(2)).roles();
+        verify(rolesResource,times(2)).getAll();
+        verify(userResource).groups();
+        verify(userMapper).userRepresentationToUserResponse(userRepresentation, roles, groups);
+        verifyNoMoreInteractions(userResource); // Убеждаемся, что не было дополнительных вызовов
     }
 
 }
-
-
-

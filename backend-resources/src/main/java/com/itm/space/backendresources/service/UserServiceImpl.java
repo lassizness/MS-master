@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
@@ -31,7 +33,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Value("${keycloak.realm}")
-    String realm;
+    public String realm; // Изменили на private и добавили аннотацию @Value для инициализации значения из application.properties
 
     public void createUser(UserRequest userRequest) {
         CredentialRepresentation password = preparePasswordRepresentation(userRequest.getPassword());
@@ -83,4 +85,5 @@ public class UserServiceImpl implements UserService {
         newUser.setLastName(userRequest.getLastName());
         return newUser;
     }
+
 }
