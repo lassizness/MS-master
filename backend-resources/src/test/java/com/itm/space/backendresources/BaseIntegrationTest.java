@@ -30,8 +30,4 @@ public abstract class BaseIntegrationTest {
                 .contentType(APPLICATION_JSON);
     }
 
-    protected MockHttpServletRequestBuilder requestWithContent(MockHttpServletRequestBuilder requestBuilder,
-                                                               Object content) throws JsonProcessingException {
-        return requestToJson(requestBuilder).content(contentWriter.writeValueAsString(content));
-    }
 }
